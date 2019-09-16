@@ -1,0 +1,12 @@
+#version 410 core
+
+layout(location = 0) in vec4 v2d;
+layout(location = 1) in vec4 color;
+
+out vec4 vertex_color;
+
+void main()
+{
+    gl_Position = v2d; // Of course, a convertion between vec2 and vec4 is allowed.
+    vertex_color = color;
+}

@@ -1,0 +1,6 @@
+#version 410 core
+layout(location = 0) in vec4 v3d;
+void main()
+{
+    gl_Position = v3d; // Of course, a convertion between vec2 and vec4 is allowed.
+}
