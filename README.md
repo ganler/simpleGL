@@ -22,3 +22,9 @@
 You only need almost 60 lines of code. And most of them is about math stuff.
 
 ![triangle_demo_code](image/triangle_demo_code.png)
+
+### Magic cube
+
+![triangle_demo](image/cube.gif)
+
+135 lines.

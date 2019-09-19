@@ -26,7 +26,7 @@ void draw_triangle()
     auto v = basev;
 
     VAO vao; // VAO first.
-    VBO vbo;
+    BO vbo;
 
     auto program = make_shader_from_file(
             "../shaders/triangle_demo.vertex",

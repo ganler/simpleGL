@@ -11,13 +11,13 @@
 #pragma once
 
 #define SGL_MAKE_UNIFORM_FUNC(type, pack_sz, loc)                  \
-    if constexpr (pack_sz == 1)                  \
-        glUniform1##type (loc, std::forward<Args>(args)...);\
-    else if constexpr (pack_sz == 2)             \
-        glUniform2##type (loc, std::forward<Args>(args)...);\
-    else if constexpr (pack_sz == 3)             \
-        glUniform3##type (loc, std::forward<Args>(args)...);\
-    else                                         \
+    if constexpr (pack_sz == 1)                                    \
+        glUniform1##type (loc, std::forward<Args>(args)...);       \
+    else if constexpr (pack_sz == 2)                               \
+        glUniform2##type (loc, std::forward<Args>(args)...);       \
+    else if constexpr (pack_sz == 3)                               \
+        glUniform3##type (loc, std::forward<Args>(args)...);       \
+    else                                                           \
         glUniform4##type(loc, std::forward<Args>(args)...);
 
 
@@ -78,7 +78,7 @@
  
  !!! 缩写
  - VAO
- - VBO
+ - BO
  - IBO/EBO
  
  !!! 三角形的渲染
@@ -107,8 +107,8 @@ namespace SGL {
      GLsizei stride,            ~ The bytes between 2 vertexes. => &v[N] - &v[N-1]
      const GLvoid * pointer     ~ Offset of the first vertex.
      */
-    template <GLuint T, typename Container> // (buffer_num, VBO-ID ~ uint*) /* Wow, VBO has a buffer space! */
-        void inline bind_data(Container&& c, GLuint draw_t = GL_STATIC_DRAW)
+    template <GLuint T, typename Container> // (buffer_num, BO-ID ~ uint*) /* Wow, BO has a buffer space! */
+        inline void bind_data(Container&& c, GLuint draw_t = GL_STATIC_DRAW)
     {   glBufferData(T, sizeof(typename std::remove_reference_t<Container>::value_type) * c.size(), c.data(), draw_t);  }
     
     template <unsigned int T>
@@ -182,18 +182,36 @@ namespace SGL {
     class shader
     {
     private:
-        GLuint id;
+        GLuint m_id;
     public:
-        shader(GLuint i) : id(i) {}
-        void use() const         {  glUseProgram(id);  }
+        shader(GLuint i = std::numeric_limits<GLuint >::max()) : m_id(i) {}
+        void use() const         {  glUseProgram(m_id);  }
+        inline GLint get_attrib(std::string_view sv) const
+        {
+            auto ret = glGetAttribLocation(m_id, sv.data());
+            if (ret == -1)
+                std::cerr << "Could not bind attribute --> " << sv << std::endl;
+            return ret;
+        }
+        inline GLint get_uniform(std::string_view sv) const
+        {
+            auto ret = glGetUniformLocation(m_id, sv.data());
+            if (ret == -1)
+                std::cerr << "Could not bind attribute --> " << sv << std::endl;
+            return ret;
+        }
+        inline void remove()
+        {
+            glDeleteProgram(m_id);
+        }
         template <typename ... Args>
-            void set(std::string_view sv, Args ... args) const
+            inline void set(std::string_view sv, Args ... args) const
         {
             using common_t = std::common_type_t<Args...>;
             constexpr std::size_t pack_sz = sizeof...(Args);
             static_assert(pack_sz > 0 && pack_sz <= 4, "Parameter numbers doesn't match!");
-
-            if constexpr      (GLint loc = glGetUniformLocation(id, sv.data()); std::is_floating_point_v<common_t> )
+            // sfinae
+            if constexpr      (GLint loc = glGetUniformLocation(m_id, sv.data()); std::is_floating_point_v<common_t> )
             {   SGL_MAKE_UNIFORM_FUNC(f, pack_sz, loc)     }
             else if constexpr ( std::is_same_v<common_t, GLuint > )
             {   SGL_MAKE_UNIFORM_FUNC(i, pack_sz, loc)     }
@@ -214,7 +232,7 @@ namespace SGL {
         glLinkProgram(program);
         glValidateProgram(program);
         remove_shader(v_shader, f_shader);
-        
+
         return program;
     }
 
@@ -231,23 +249,27 @@ namespace SGL {
     }
 
 
-    // @@@@@@@@@@@@@ GSL::VBO
-    class VBO
+    // @@@@@@@@@@@@@ GSL::OO
+    class BO
     {
     public:
-        VBO(GLuint sz = 1) : size(sz) {  glGenBuffers(sz, &vbo);  }
+        BO(GLuint sz = 1) : size(sz) {  glGenBuffers(sz, &m_id);  }
         template<GLuint T = GL_ARRAY_BUFFER, typename ... Args>
-            inline void write(Args&& ... args) /* Wow, GL_ARRAY_BUFFER uses VBO buffer */
+            inline void write(Args&& ... args) /* Wow, GL_ARRAY_BUFFER uses BO buffer */
         {
-            glBindBuffer(T, vbo);
+            glBindBuffer(T, m_id);
             bind_data<T>(std::forward<Args>(args)...);
         }
         inline void remove()
-        {   glDeleteBuffers(size, &vbo);  }
+        {   glDeleteBuffers(size, &m_id);  }
+        GLuint get() const
+        {
+            return m_id;
+        }
     private:
-        GLuint vbo  = 0;
+        GLuint m_id  = 0;
         GLuint size = 0;
-    }; // class VBO
+    }; // class BO
 
 
     // @@@@@@@@@@@@@ GSL::VAO
@@ -259,7 +281,7 @@ namespace SGL {
             glGenVertexArrays(sz, &vao);
             glBindVertexArray(vao);
             glEnableVertexAttribArray(0);  // 为了性能，顶点属性默认是禁用的，这里我们要打开才能看到东西。
-            // VBO对于的所有状态都将存储在VAO中 ~ VBO 要和 VAO 搭配好。
+            // VBO对于的所有状态都将存储在VAO中 ~ BO 要和 VAO 搭配好。
             // OpenGL的核心模式要求我们使用VAO，所以它知道该如何处理我们的顶点输入。如果我们绑定VAO失败，OpenGL会拒绝绘制任何东西。
         }
 
@@ -300,8 +322,16 @@ void glVertexAttribPointer(	GLuint index,
         GLuint vao = 0;
         GLuint size = 0;
     }; // class VAO
-    
-    
+
+    template<
+            int MajorV = 4,
+            int MinorV = 1,
+            int ProfT = GLFW_OPENGL_CORE_PROFILE>
+    struct session_config{
+        static constexpr int major_v = MajorV;
+        static constexpr int minor_v = 1;
+        static constexpr int prof_t = ProfT;
+    };
     
     // @@@@@@@@@@@@@ GSL::session
     class session
@@ -309,15 +339,16 @@ void glVertexAttribPointer(	GLuint index,
     public:
         GLFWwindow* window;
     public:
-        template<
-                int MajorV = 4,
-                int MinorV = 1,
-                int ProfT = GLFW_OPENGL_CORE_PROFILE,
-                typename ... Args>
-            session(Args&& ... args)
+        template <typename T = session_config<>>
+            session(int w,
+                    int h,
+                    const char * str     = "unnamed",
+                    GLFWmonitor* monitor = nullptr,
+                    GLFWwindow * share   = nullptr,
+                    T = T{})
         {
-            init(MajorV, MinorV, ProfT);
-            make_window(std::forward<Args>(args)...);
+            init(T::major_v, T::minor_v, T::prof_t);
+            make_window(w, h, str, monitor, share);
         }
 
         // Activate : Rule of 5.
@@ -360,9 +391,9 @@ void glVertexAttribPointer(	GLuint index,
 #endif
                 std::exit(-1);
             }
-            //    glfwGetFramebufferSize(win, &w, &h); // Compatible for Retina.
-            //    glViewport(0, 0, w, h);
-            //    glfwSetFramebufferSizeCallback(win, [](GLFWwindow* win_, int w_, int h_)
+//                glfwGetFramebufferSize(window, &w, &h); // Compatible for Retina.
+//                glViewport(0, 0, w, h);
+//                glfwSetFramebufferSizeCallback(win, [](GLFWwindow* win_, int w_, int h_)
             //                                   {
             //                                       glViewport(0, 0, w_, h_);
             //                                   });
@@ -373,7 +404,7 @@ void glVertexAttribPointer(	GLuint index,
         {
             while(!glfwWindowShouldClose(window))
             {
-                glClear(GL_COLOR_BUFFER_BIT);         // 颜色`COLOR`清屏
+                glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);         // 颜色`COLOR`清屏
                 func();
                 glfwSwapBuffers(window); // 交换颜色缓冲，这里的Buffer是win的buffer，其存储着win的像素信息
                 glfwPollEvents();     // 检查触发事件，并启动回调函数
@@ -391,6 +422,14 @@ void glVertexAttribPointer(	GLuint index,
             int n;
             glGetIntegerv(T, &n);
             return n;
+        }
+
+        template <typename Func, typename ... Args>
+            inline void call_back(Func&& f, Args&& ... args)
+        {
+            glfwSetKeyCallback(window, std::forward<Func>(f));
+            if constexpr (sizeof...(Args) > 0)
+                glfwSetInputMode(window, std::forward<Args>(args)...);
         }
     private:
         inline static std::atomic<std::size_t> window_cnt {0};
@@ -413,6 +452,3 @@ void glVertexAttribPointer(	GLuint index,
     };
     
 }
-
-
-

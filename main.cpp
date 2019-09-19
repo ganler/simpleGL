@@ -1,13 +1,12 @@
 //#define SIM_USE_GLAD // Active GLAD API in simpleGL.
 
-#include "demos/window.hpp"
-#include "demos/triangle.hpp"
-//#include "demos/cube.hpp"
+//#include "demos/window.hpp"
+//#include "demos/triangle.hpp"
+#include "demos/cube.hpp"
 
-int main()
+int main(int argc, char* argv[])
 {
 //     empty_window();
-     draw_triangle();
-//     std::cout << s.version() << '\n';
-//     std::cout << s.get_info<GL_MAX_VERTEX_ATTRIBS>() << std::endl;
+//     draw_triangle();
+    draw_cube(argc, argv);
 }

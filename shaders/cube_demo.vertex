@@ -1,6 +1,9 @@
-#version 410 core
-layout(location = 0) in vec4 v3d;
-void main()
-{
-    gl_Position = v3d; // Of course, a convertion between vec2 and vec4 is allowed.
+attribute vec3 coord3d;
+attribute vec3 v_color;
+uniform mat4 mvp;
+varying vec3 f_color;
+
+void main(void) {
+  gl_Position = mvp * vec4(coord3d, 1.0);
+  f_color = v_color;
 }
