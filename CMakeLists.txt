@@ -4,10 +4,8 @@ project(LearnOpenGL)
 set(CMAKE_CXX_STANDARD 17)
 add_executable(${PROJECT_NAME} main.cpp)
 
-
 include_directories(glm)
 include_directories(.)
-
 
 # GL
 find_package(OpenGL REQUIRED)
@@ -31,6 +29,7 @@ endif ()
 find_package(GLUT REQUIRED)
 if (GLUT_FOUND)
     message(STATUS "FIND GLUT_INCLUDE_DIRS => ${GLUT_INCLUDE_DIRS}")
+    add_compile_options(-Wdeprecated-declarations)
     include_directories(${GLUT_INCLUDE_DIRS})
     target_link_libraries(${PROJECT_NAME} ${GLUT_LIBRARY})
 endif ()
@@ -39,7 +38,6 @@ endif ()
 # GLFW
 find_package(glfw3 REQUIRED)
 include_directories(${GLFW_INCLUDE_DIRS})
-message(STATUS "FIND GLFW_INCLUDE_DIRS => " ${GLFW_INCLUDE_DIRS})
-
+message(STATUS "FIND GLFW_INCLUDE_DIRS => ${GLFW_INCLUDE_DIRS}" )
 
 target_link_libraries(${PROJECT_NAME} glfw)

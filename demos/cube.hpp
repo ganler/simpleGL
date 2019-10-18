@@ -4,6 +4,7 @@
 #include <cmath>
 
 #ifdef __APPLE__
+#define GL_SILENCE_DEPRECATION
 #include <GLUT/glut.h>  // Sorry, for convinience I'd like to use GLUT.
 #else
 #include <GL/glut.h>
