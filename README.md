@@ -25,6 +25,12 @@ You only need almost 60 lines of code. And most of them is about math stuff.
 
 ### Magic cube
 
-![triangle_demo](image/cube.gif)
+![](image/cube.gif)
 
 135 lines.
+
+### Solar System
+
+![](image/ss.jpg)
+
+111 lines.

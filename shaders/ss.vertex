@@ -1,0 +1,14 @@
+#version 410 core
+
+layout (location = 0) in vec3 coord3d;
+layout (location = 1) in vec3 cpp_color;  // Share data with vertexes.
+
+uniform mat4 mvp;
+
+out vec3 render_color;
+
+void main(void)
+{
+   gl_Position = mvp * vec4(coord3d, 1.0);
+   render_color = cpp_color;
+}

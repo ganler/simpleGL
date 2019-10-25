@@ -197,7 +197,7 @@ public:
     {
         auto ret = glGetUniformLocation(m_id, sv.data());
         if (ret == -1)
-            std::cerr << "Could not bind attribute --> " << sv << std::endl;
+            std::cerr << "Could not bind uniform --> " << sv << std::endl;
         return ret;
     }
     inline void remove()
