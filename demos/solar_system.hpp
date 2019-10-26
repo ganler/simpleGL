@@ -66,12 +66,14 @@ void solar_system_demo()
     std::array<GLfloat, 3 * (quant_sz+1)   * (quant_sz+1) * sphere_num> vertex_data{};
     std::array<GLuint,  6 * (quant_sz - 1) * quant_sz     * sphere_num>    ebo_data{};
 
-    auto&& [lv1, le1] = add_sphere<quant_sz, quant_sz>(0  , 0  , -4 , 1.8, 0, vertex_data.begin(), ebo_data.begin());
-    auto&& [lv2, le2] = add_sphere<quant_sz, quant_sz>(0  , 3.8, 0.8, 0.4, 1, lv1, le1);
-    auto&& [lv3, le3] = add_sphere<quant_sz, quant_sz>(4.0, 0.4, 0  , 0.2, 2, lv2, le2);
-    auto&& [lv4, le4] = add_sphere<quant_sz, quant_sz>(2.0, 1.4, -1 , 0.2, 3, lv3, le3);
+    auto&& [lv1, le1] = add_sphere<quant_sz, quant_sz>(-1 , -0.4, 2  , 0.1, 0, vertex_data.begin(), ebo_data.begin());
+    auto&& [lv2, le2] = add_sphere<quant_sz, quant_sz>(0  , -2.8,-0.8, 0.4, 1, lv1, le1);
+    auto&& [lv3, le3] = add_sphere<quant_sz, quant_sz>(2.7, 0.4 , 0.2, 0.2, 2, lv2, le2);
+    auto&& [lv4, le4] = add_sphere<quant_sz, quant_sz>(0  ,  0  , 3  , 0.6, 3, lv3, le3);
 
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
     SGL::BO  vbo, ebo;
     SGL::VAO vao;
 
@@ -97,7 +99,7 @@ void solar_system_demo()
         using namespace std::chrono_literals;
         std::this_thread::sleep_for(100us);
         // Math Stuff.
-        glm::mat4 model = glm::rotate(glm::mat4(1.0f), (float)glfwGetTime(), glm::vec3(0.f, 0.f, 5.f));
+        glm::mat4 model = glm::rotate(glm::mat4(1.0f), (float)glfwGetTime(), glm::vec3(0.f, -2.f, 4.f));
         model = glm::translate(model, glm::vec3(0.0, 0.0, -4.0));
         glm::mat4 view = glm::lookAt(glm::vec3(0.0, 0.0, 10.0), glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, 1.0, 0.0));
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.0f * width / height, 0.1f, 20.0f);
