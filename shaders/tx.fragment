@@ -1,0 +1,11 @@
+#version 410 core
+
+in vec2 text_coord;
+out vec4 frag_color;
+
+uniform sampler2D texture_source;
+
+void main(void)
+{
+    frag_color = texture(texture_source, text_coord);
+}

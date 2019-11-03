@@ -62,7 +62,6 @@ void draw_triangle()
         vbo.write(v);
         vao.interpret(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
         vao.interpret(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
-        vao.vertex_attrib_array(1);
         vao.bind();
 
         glDrawArrays(GL_TRIANGLES, 0, v.size());

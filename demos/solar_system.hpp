@@ -80,10 +80,7 @@ void solar_system_demo()
     vbo.write(vertex_data);
 
     vao.interpret(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr); // Shape.
-    vao.vertex_attrib_array(0);
-
     vao.interpret(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr); // Color it.
-    vao.vertex_attrib_array(1);
 
     ebo.write<GL_ELEMENT_ARRAY_BUFFER>(ebo_data);
 

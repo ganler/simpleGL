@@ -30,6 +30,7 @@
 #include <GLFW/glfw3.h>
 
 #include <array>
+#include <cmath>
 #include <tuple>
 #include <string>
 #include <atomic>
@@ -95,11 +96,15 @@
  */
 
 
-namespace SGL {
-template <std::size_t N>
+namespace SGL
+{
+
+template<std::size_t N>
 using points = std::array<float, N>;
+
 template<class T>
 struct always_false : std::false_type {};
+
 /*
  GLuint index,              ~ where to begin
  GLint size,                ~ how many ${type}s is a pointer
@@ -107,26 +112,26 @@ struct always_false : std::false_type {};
  GLsizei stride,            ~ The bytes between 2 vertexes. => &v[N] - &v[N-1]
  const GLvoid * pointer     ~ Offset of the first vertex.
  */
-template <GLuint T, typename Container> // (buffer_num, BO-ID ~ uint*) /* Wow, BO has a buffer space! */
-inline void bind_data(Container&& c, GLuint draw_t = GL_STATIC_DRAW)
-{   glBufferData(T, sizeof(typename std::remove_reference_t<Container>::value_type) * c.size(), c.data(), draw_t);  }
+template<GLuint T, typename Container>
+// (buffer_num, BO-ID ~ uint*) /* Wow, BO has a buffer space! */
+inline void bind_data(Container &&c, GLuint draw_t = GL_STATIC_DRAW) {
+    glBufferData(T, sizeof(typename std::remove_reference_t<Container>::value_type) * c.size(), c.data(), draw_t);
+}
 
-template <unsigned int T>
-static unsigned int compile_shader(std::string_view source)
-{
+template<unsigned int T>
+static unsigned int compile_shader(std::string_view source) {
     auto id = glCreateShader(T);
-    const char* src = source.data();
+    const char *src = source.data();
     glShaderSource(id, 1, &src, nullptr);
     glCompileShader(id);
 
     int success;
     glGetShaderiv(id, GL_COMPILE_STATUS, &success);
-    if(!success)
-    {
+    if (!success) {
         // Cannot compile it.
         int len;
         glGetShaderiv(id, GL_INFO_LOG_LENGTH, &len);
-        auto info = (char*)alloca(len * sizeof(char));
+        auto info = (char *) alloca(len * sizeof(char));
         glGetShaderInfoLog(id, len * sizeof(char), &len, info);
         std::cerr << (T == GL_VERTEX_SHADER ? "[Vertex]" : "[Fragment]") << " Shader compile failed: "
                   << info << '\n';
@@ -136,8 +141,7 @@ static unsigned int compile_shader(std::string_view source)
 }
 
 template<typename Int, typename ... Args>
-static void attach(Int p, Args&& ... args)
-{   // compatible with c++11.
+static void attach(Int p, Args &&... args) {   // compatible with c++11.
 #if __cplusplus < 201703L
     std::initializer_list<nullptr_t>{
             ([&](){  glAttachShader(p, std::forward<Args>(args));  }(), nullptr)...
@@ -148,8 +152,7 @@ static void attach(Int p, Args&& ... args)
 }
 
 template<typename ... Args>
-static void remove_shader(Args&& ... args)
-{   // compatible with c++11.
+static void remove_shader(Args &&... args) {   // compatible with c++11.
 #if __cplusplus < 201703L
     std::initializer_list<nullptr_t>{
             ([&](){  glDeleteShader(std::forward<Args>(args));  }(), nullptr)...
@@ -159,8 +162,7 @@ static void remove_shader(Args&& ... args)
 #endif
 }
 
-inline std::string file2str(std::string_view f)
-{
+inline std::string file2str(std::string_view f) {
     std::ifstream fs(f.data());
     std::string str;
 
@@ -179,13 +181,14 @@ inline std::string file2str(std::string_view f)
 
 
 // @@@@@@@@@@@@@ GSL::shader
-class shader
-{
+class shader {
 private:
     GLuint m_id;
 public:
-    shader(GLuint i = std::numeric_limits<GLuint >::max()) : m_id(i) {}
-    void use() const         {  glUseProgram(m_id);  }
+    shader(GLuint i = std::numeric_limits<GLuint>::max()) : m_id(i) {}
+
+    void use() const { glUseProgram(m_id); }
+
     inline GLint get_attrib(std::string_view sv) const
     {
         auto ret = glGetAttribLocation(m_id, sv.data());
@@ -193,6 +196,7 @@ public:
             std::cerr << "Could not bind attribute --> " << sv << std::endl;
         return ret;
     }
+
     inline GLint get_uniform(std::string_view sv) const
     {
         auto ret = glGetUniformLocation(m_id, sv.data());
@@ -200,30 +204,29 @@ public:
             std::cerr << "Could not bind uniform --> " << sv << std::endl;
         return ret;
     }
+
     inline void remove()
     {
         glDeleteProgram(m_id);
     }
-    template <typename ... Args>
-    inline void set_uniform(std::string_view sv, Args ... args) const
-    {
+
+    template<typename ... Args>
+    inline void set_uniform(std::string_view sv, Args ... args) const {
         using common_t = std::common_type_t<Args...>;
         constexpr std::size_t pack_sz = sizeof...(Args);
         static_assert(pack_sz > 0 && pack_sz <= 4, "Parameter numbers doesn't match!");
         // sfinae
-        if constexpr      (GLint loc = glGetUniformLocation(m_id, sv.data()); std::is_floating_point_v<common_t> )
-        {   SGL_MAKE_UNIFORM_FUNC(f, pack_sz, loc)     }
-        else if constexpr ( std::is_same_v<common_t, GLuint > )
-        {   SGL_MAKE_UNIFORM_FUNC(i, pack_sz, loc)     }
-        else if constexpr ( std::is_convertible_v<common_t, GLint > )
-        {   SGL_MAKE_UNIFORM_FUNC(ui, pack_sz, loc)    }
+        if constexpr      (GLint loc = glGetUniformLocation(m_id, sv.data()); std::is_floating_point_v<common_t>) {
+            SGL_MAKE_UNIFORM_FUNC(f, pack_sz, loc)
+        }
+        else if constexpr (std::is_same_v<common_t, GLuint>) { SGL_MAKE_UNIFORM_FUNC(i, pack_sz, loc) }
+        else if constexpr (std::is_convertible_v<common_t, GLint>) { SGL_MAKE_UNIFORM_FUNC(ui, pack_sz, loc) }
         else
-            static_assert(always_false<common_t >::value, "Parameter's type doesn't match!");
+                static_assert(always_false<common_t>::value, "Parameter's type doesn't match!");
     }
 };
 
-shader make_shader_from_str(std::string_view vs, std::string_view fs)
-{
+shader make_shader_from_str(std::string_view vs, std::string_view fs) {
     auto program = glCreateProgram();
     auto v_shader = compile_shader<GL_VERTEX_SHADER>(vs);
     auto f_shader = compile_shader<GL_FRAGMENT_SHADER>(fs);
@@ -236,51 +239,90 @@ shader make_shader_from_str(std::string_view vs, std::string_view fs)
     return program;
 }
 
-template <typename ... Args>
-shader make_shader_from_file(Args&& ... args)
-{
+template<typename ... Args>
+shader make_shader_from_file(Args &&... args) {
     return make_shader_from_str(file2str(std::forward<Args>(args))...);
 }
 
-inline void set_color(float r, float g, float b, float a = 1)
-{
+inline void set_color(float r, float g, float b, float a = 1) {
     glClearColor(r, g, b, a);
     // glClearColor + glClear 组合 -> 清屏并设置颜色
 }
 
 
 // @@@@@@@@@@@@@ GSL::OO
-class BO
-{
+class BO {
 public:
-    BO(GLuint sz = 1) : size(sz) {  glGenBuffers(sz, &m_id);  }
+    BO(GLuint sz = 1) : size(sz) { glGenBuffers(sz, &m_id); }
+
     template<GLuint T = GL_ARRAY_BUFFER, typename ... Args>
-    inline void write(Args&& ... args) /* Wow, GL_ARRAY_BUFFER uses BO buffer */
+    inline void write(Args &&... args) /* Wow, GL_ARRAY_BUFFER uses BO buffer */
     {
         glBindBuffer(T, m_id);
         bind_data<T>(std::forward<Args>(args)...);
     }
-    inline void remove()
-    {   glDeleteBuffers(size, &m_id);  }
-    GLuint get() const
-    {
+
+    inline void remove() { glDeleteBuffers(size, &m_id); }
+
+    GLuint get() const {
         return m_id;
     }
+
 private:
-    GLuint m_id  = 0;
+    GLuint m_id = 0;
     GLuint size = 0;
 }; // class BO
 
 
-// @@@@@@@@@@@@@ GSL::VAO
-class VAO
+class texture
 {
 public:
-    VAO(GLuint sz = 1) : size(sz)
+    texture(GLuint sz = 1) : size(sz)
     {
+        glEnable(GL_TEXTURE_2D);
+        glGenTextures(sz, &tex);
+        glBindTexture(GL_TEXTURE_2D, tex);
+    }
+    template <typename ... Args>
+    void parami(Args&& ... args)
+    {
+        glTexParameteri(GL_TEXTURE_2D, std::forward<Args>(args)...);
+    }
+    void bind()
+    {
+        glBindTexture(GL_TEXTURE_2D, tex);
+    }
+    template <typename Mat>
+    void load_image(Mat&& im)
+    {
+        glTexImage2D(
+                GL_TEXTURE_2D,
+                0,
+                GL_RGB,
+                im.cols,
+                im.rows,
+                0,
+                GL_RGB,
+                GL_UNSIGNED_BYTE,
+                im.data);
+    }
+    void mipmap()
+    {
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+private:
+    GLuint size;
+    GLuint tex;
+};
+
+
+// @@@@@@@@@@@@@ GSL::VAO
+class VAO {
+public:
+    VAO(GLuint sz = 1) : size(sz) {
         glGenVertexArrays(sz, &vao);
         glBindVertexArray(vao);
-        glEnableVertexAttribArray(0);  // 为了性能，顶点属性默认是禁用的，这里我们要打开才能看到东西。
+        glEnableVertexAttribArray(vao);  // 为了性能，顶点属性默认是禁用的，这里我们要打开才能看到东西。
         // VBO对于的所有状态都将存储在VAO中 ~ BO 要和 VAO 搭配好。
         // OpenGL的核心模式要求我们使用VAO，所以它知道该如何处理我们的顶点输入。如果我们绑定VAO失败，OpenGL会拒绝绘制任何东西。
     }
@@ -294,30 +336,31 @@ void glVertexAttribPointer(	GLuint index,
                         const GLvoid * pointer);
      */
     inline void interpret(GLuint index,
-                          GLint  size,
+                          GLint size,
                           GLenum type,
                           GLboolean normalized,
                           GLsizei stride,
-                          const GLvoid * pointer) const
-    {  glVertexAttribPointer(index, size, type, normalized, stride, pointer);  }
-    inline static void vertex_attrib_array(GLint v)
-    {  glEnableVertexAttribArray(v); }
-    template <GLuint T>
-    inline void unbind() const
-    {
+                          const GLvoid *pointer) const {
+        glVertexAttribPointer(index, size, type, normalized, stride, pointer);
+        glEnableVertexAttribArray(index);
+    }
+
+    template<GLuint T>
+    inline void unbind() const {
         /* Unbind Buffer */ glBindBuffer(T, 0); // Bind it to nothing.
         /* Unbind Vertex */ glBindVertexArray(0);
     }
+
     template<GLuint T = GL_ARRAY_BUFFER, typename ... Args>
-    inline void interpret_and_unbind(Args&& ... args) const
-    {
+    inline void interpret_and_unbind(Args &&... args) const {
         interpret(std::forward<Args>(args)...);
         unbind<T>();
     }
-    inline void bind() const
-    {  glBindVertexArray(vao);  }
-    inline void remove() const
-    {  glDeleteVertexArrays(size, &vao);  }
+
+    inline void bind() const { glBindVertexArray(vao); }
+
+    inline void remove() const { glDeleteVertexArrays(size, &vao); }
+
 private:
     GLuint vao = 0;
     GLuint size = 0;
@@ -327,83 +370,76 @@ template<
         int MajorV = 4,
         int MinorV = 1,
         int ProfT = GLFW_OPENGL_CORE_PROFILE>
-struct session_config{
+struct session_config {
     static constexpr int major_v = MajorV;
     static constexpr int minor_v = 1;
     static constexpr int prof_t = ProfT;
 };
 
 // @@@@@@@@@@@@@ GSL::session
-class session
-{
+class session {
 public:
-    GLFWwindow* window;
+    GLFWwindow *window;
 public:
-    template <typename T = session_config<>>
+    template<typename T = session_config<>>
     session(int w,
             int h,
-            const char * str     = "unnamed",
-            GLFWmonitor* monitor = nullptr,
-            GLFWwindow * share   = nullptr,
-            T = T{})
-    {
+            const char *str = "unnamed",
+            GLFWmonitor *monitor = nullptr,
+            GLFWwindow *share = nullptr,
+            T = T{}) {
         init(T::major_v, T::minor_v, T::prof_t);
         make_window(w, h, str, monitor, share);
     }
 
     // Activate : Rule of 5.
-    ~session()
-    {
-        if( --window_cnt == 0)
+    ~session() {
+        if (--window_cnt == 0)
             glfwTerminate();
     }
-    session(const session& s) = delete;
-    session(session&& s)      = delete;
+
+    session(const session &s) = delete;
+
+    session(session &&s) = delete;
 
     inline void make_window(
             int w,
             int h,
-            const char * str     = "unnamed",
-            GLFWmonitor* monitor = nullptr,
-            GLFWwindow * share   = nullptr)
-    {
+            const char *str = "unnamed",
+            GLFWmonitor *monitor = nullptr,
+            GLFWwindow *share = nullptr) {
         // For glfw-Window manipulation Doc: http://www.glfw.org/docs/latest/window.html#window_hints
         window = glfwCreateWindow(w, h, str, monitor, share);
         // Test GLFW initialization.
-        if( nullptr == window  )
-        {
+        if (nullptr == window) {
             std::cerr << "glfwWindows cannot be created\n";
             std::exit(-1);
         }
         glfwMakeContextCurrent(window); // 在当前线程建立win的context // 必须先执行
 
-#ifdef SIM_USE_GLAD
+#ifdef SGL_USE_GLAD
         // GLAD test.
-            if( !gladLoadGLLoader((GLADloadproc)glfwGetProcAddress) )
-            {
-                std::cerr << "GLAD failed to initialize!\n";
+        if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress))
+        {
+            std::cerr << "GLAD failed to initialize!\n";
+            std::exit(-1);
+        }
 #else
-        // GLEW TEST
+            // GLEW TEST
         glewExperimental = true;
         if (glewInit() != GLEW_OK)
         {
             std::cerr << "GLEW failed to initialize!\n";
-#endif
             std::exit(-1);
         }
-//                glfwGetFramebufferSize(window, &w, &h); // Compatible for Retina.
-//                glViewport(0, 0, w, h);
-//                glfwSetFramebufferSizeCallback(win, [](GLFWwindow* win_, int w_, int h_)
-        //                                   {
-        //                                       glViewport(0, 0, w_, h_);
-        //                                   });
+#endif
     }
 
-    template <typename Func>
-    inline void run(Func&& func) const
-    {
-        while(!glfwWindowShouldClose(window))
-        {
+    template<typename Func>
+    inline void run(Func &&func) const {
+        while (!glfwWindowShouldClose(window)) {
+            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+                glfwSetWindowShouldClose(window, true);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);         // 颜色`COLOR`清屏
             func();
             glfwSwapBuffers(window); // 交换颜色缓冲，这里的Buffer是win的buffer，其存储着win的像素信息
@@ -411,44 +447,41 @@ public:
         }
     }
 
-    inline const GLubyte* version() const noexcept
-    {// Initialize ur GL first.
+    inline const GLubyte *version() const noexcept {// Initialize ur GL first.
         return glGetString(GL_VERSION);
     }
 
-    template <GLint T>
-    inline GLint get_info() const noexcept
-    {
+    template<GLint T>
+    inline GLint get_info() const noexcept {
         int n;
         glGetIntegerv(T, &n);
         return n;
     }
 
-    template <typename Func, typename ... Args>
-    inline void call_back(Func&& f, Args&& ... args)
-    {
+    template<typename Func, typename ... Args>
+    inline void call_back(Func &&f, Args &&... args) {
         glfwSetKeyCallback(window, std::forward<Func>(f));
         if constexpr (sizeof...(Args) > 0)
             glfwSetInputMode(window, std::forward<Args>(args)...);
     }
 
-    static void enable(GLenum f)
-    {
+    static void enable(GLenum f) {
         glEnable(f);
     }
-    static void disable(GLenum f)
-    {
+
+    static void disable(GLenum f) {
         glDisable(f);
     }
+
 private:
-    inline static std::atomic<std::size_t> window_cnt {0};
-    inline void init(int major_v = 4, int minor_v = 1, int prof_type=GLFW_OPENGL_CORE_PROFILE) noexcept
-    {   // glfwWindowHint(A, v)是用v值来配置参数A的
-        if( window_cnt++ == 0 )
+    inline static std::atomic<std::size_t> window_cnt{0};
+
+    inline void init(int major_v = 4, int minor_v = 1,
+                     int prof_type = GLFW_OPENGL_CORE_PROFILE) noexcept {   // glfwWindowHint(A, v)是用v值来配置参数A的
+        if (window_cnt++ == 0)
             glfwInit();
 
-        if(major_v != -1 && minor_v != -1)
-        {   // No need to make this a rule.
+        if (major_v != -1 && minor_v != -1) {   // No need to make this a rule.
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, major_v);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minor_v);
             glfwWindowHint(GLFW_OPENGL_PROFILE, prof_type);
@@ -460,4 +493,71 @@ private:
     }
 };
 
+template<typename Iter, typename ... Args>
+void seq_add(Iter &&it, Args ... args) { ((*it++ = args), ...); }
+
+template<std::size_t StackCnt = 20, std::size_t SectorCnt = 20>
+struct sphere {
+    using dcontainer_t = std::array<GLfloat, 3 * (StackCnt + 1) * (SectorCnt + 1) + (StackCnt+1) * (SectorCnt+1) * 2>;
+    using icontainer_t = std::array<GLuint, (StackCnt - 1) * SectorCnt * 6>;
+
+    constexpr sphere(
+            float cx, float cy, float cz, /* (cx, cy, cz): 球心位置 */
+            float r,                      /* r           : 半径     */
+            float factor_w = 1.0,
+            float factor_h = 1.0) noexcept
+    {
+        auto data_it = data.begin();
+        auto elem_it = index.begin();
+
+        constexpr float stack_step = M_PI / StackCnt;        // 0 ~ pi
+        constexpr float sector_step = 2 * M_PI / SectorCnt;  // 0 ~ 2pi
+
+        for (std::size_t i = 0; i <= StackCnt; ++i)
+        {
+            float phi = M_PI / 2 - i * stack_step;
+            float rcosphi = r * std::cos(phi), z = r * std::sin(phi);
+            int k1 = i * (SectorCnt + 1), k2 = k1 + (SectorCnt + 1);
+            for (std::size_t j = 0; j <= SectorCnt; ++j, ++k1, ++k2)
+            {
+                float theta = j * sector_step;
+                float x = rcosphi * std::cos(theta), y = rcosphi * std::sin(theta);
+                seq_add(
+                        data_it,
+                        cx + x, cy + y, cz + z,
+                        factor_w * static_cast<GLfloat>(j) / SectorCnt,
+                        factor_h * static_cast<GLfloat >(i) / StackCnt);
+                if (i < StackCnt && j < SectorCnt)
+                {
+                    if (i != 0)
+                        seq_add(elem_it, k1, k2, k1 + 1);
+                    if (i != StackCnt - 1)
+                        seq_add(elem_it, k1 + 1, k2, k2 + 1);
+                }
+            }
+        }
+    }
+
+    void prepare(int loc1, int loc2)
+    {
+        vao.bind();
+        vbo.write(data);
+        vao.interpret(loc1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), nullptr); // Shape.
+        vao.interpret(loc2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(sizeof(float)*3));
+    }
+
+    void draw()
+    {
+        vao.bind();
+        ibo.write<GL_ELEMENT_ARRAY_BUFFER>(index);
+        glDrawElements(GL_TRIANGLES, index.size(), GL_UNSIGNED_INT, nullptr); // 注意ebo的类型要注意
+    }
+    float        x, y, z, r;
+    SGL::VAO     vao;
+    SGL::BO      vbo, ibo;
+    SGL::texture tex;
+    dcontainer_t data;
+    icontainer_t index;
+};
 }
+
