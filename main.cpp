@@ -38,6 +38,7 @@ int main()
     SGL::set_color(0.2f, 0.3f, 0.4f);
 
     /* Texture */
+//    constexpr char name[] = "../textures/test.jpeg"; // 如果你想复现我的Problem
     constexpr char name[] = "../textures/g14.jpeg";
     auto im = cv::imread(name);
     cv::cvtColor(im, im, cv::COLOR_BGR2RGB);
