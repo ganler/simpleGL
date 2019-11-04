@@ -105,6 +105,8 @@ using points = std::array<float, N>;
 template<class T>
 struct always_false : std::false_type {};
 
+constexpr double pi = 3.14159265358979323846264338327950288;
+
 /*
  GLuint index,              ~ where to begin
  GLint size,                ~ how many ${type}s is a pointer
@@ -114,8 +116,14 @@ struct always_false : std::false_type {};
  */
 template<GLuint T, typename Container>
 // (buffer_num, BO-ID ~ uint*) /* Wow, BO has a buffer space! */
-inline void bind_data(Container &&c, GLuint draw_t = GL_STATIC_DRAW) {
+inline void bind_data(Container &&c, GLuint draw_t = GL_STATIC_DRAW)
+{
     glBufferData(T, sizeof(typename std::remove_reference_t<Container>::value_type) * c.size(), c.data(), draw_t);
+}
+
+void active_texture(int l)
+{
+    glActiveTexture(GL_TEXTURE0 + l);
 }
 
 template<unsigned int T>
@@ -178,7 +186,6 @@ inline std::string file2str(std::string_view f) {
 /*
  In OpenGL => vertexShader + fragmentShader.
  */
-
 
 // @@@@@@@@@@@@@ GSL::shader
 class shader {
@@ -295,6 +302,7 @@ public:
     template <typename Mat>
     void load_image(Mat&& im)
     {
+        assert(im.isContinuous());
         glTexImage2D(
                 GL_TEXTURE_2D,
                 0,
@@ -510,12 +518,12 @@ struct sphere {
         auto data_it = data.begin();
         auto elem_it = index.begin();
 
-        constexpr float stack_step = M_PI / StackCnt;        // 0 ~ pi
-        constexpr float sector_step = 2 * M_PI / SectorCnt;  // 0 ~ 2pi
+        constexpr float stack_step = pi / StackCnt;        // 0 ~ pi
+        constexpr float sector_step = 2 * pi / SectorCnt;  // 0 ~ 2pi
 
         for (std::size_t i = 0; i <= StackCnt; ++i)
         {
-            float phi = M_PI / 2 - i * stack_step;
+            float phi = pi / 2 - i * stack_step;
             float rcosphi = r * std::cos(phi), z = r * std::sin(phi);
             int k1 = i * (SectorCnt + 1), k2 = k1 + (SectorCnt + 1);
             for (std::size_t j = 0; j <= SectorCnt; ++j, ++k1, ++k2)
@@ -560,4 +568,3 @@ struct sphere {
     icontainer_t index;
 };
 }
-
