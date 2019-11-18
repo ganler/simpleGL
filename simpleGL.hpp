@@ -32,6 +32,8 @@
 #include <array>
 #include <cmath>
 #include <tuple>
+#include <thread>
+#include <chrono>
 #include <string>
 #include <atomic>
 #include <fstream>
@@ -102,7 +104,7 @@ namespace SGL
 template<std::size_t N>
 using points = std::array<float, N>;
 
-template<class T>
+template<typename T>
 struct always_false : std::false_type {};
 
 constexpr double pi = 3.14159265358979323846264338327950288;
@@ -287,8 +289,8 @@ public:
     texture(GLuint sz = 1) : size(sz)
     {
         glEnable(GL_TEXTURE_2D);
-        glGenTextures(sz, &tex);
-        glBindTexture(GL_TEXTURE_2D, tex);
+        glGenTextures(sz, &tex_id);
+        glBindTexture(GL_TEXTURE_2D, tex_id);
     }
     template <typename ... Args>
     void parami(Args&& ... args)
@@ -297,7 +299,7 @@ public:
     }
     void bind()
     {
-        glBindTexture(GL_TEXTURE_2D, tex);
+        glBindTexture(GL_TEXTURE_2D, tex_id);
     }
     template <typename Mat>
     void load_image(Mat&& im)
@@ -318,9 +320,8 @@ public:
     {
         glGenerateMipmap(GL_TEXTURE_2D);
     }
-private:
     GLuint size;
-    GLuint tex;
+    GLuint tex_id;
 };
 
 
@@ -560,6 +561,7 @@ struct sphere {
         ibo.write<GL_ELEMENT_ARRAY_BUFFER>(index);
         glDrawElements(GL_TRIANGLES, index.size(), GL_UNSIGNED_INT, nullptr); // 注意ebo的类型要注意
     }
+
     float        x, y, z, r;
     SGL::VAO     vao;
     SGL::BO      vbo, ibo;
