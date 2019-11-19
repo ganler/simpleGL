@@ -225,13 +225,13 @@ public:
         constexpr std::size_t pack_sz = sizeof...(Args);
         static_assert(pack_sz > 0 && pack_sz <= 4, "Parameter numbers doesn't match!");
         // sfinae
-        if constexpr      (GLint loc = glGetUniformLocation(m_id, sv.data()); std::is_floating_point_v<common_t>) {
+        if constexpr (GLint loc = glGetUniformLocation(m_id, sv.data()); std::is_floating_point_v<common_t>) {
             SGL_MAKE_UNIFORM_FUNC(f, pack_sz, loc)
         }
         else if constexpr (std::is_same_v<common_t, GLuint>) { SGL_MAKE_UNIFORM_FUNC(i, pack_sz, loc) }
         else if constexpr (std::is_convertible_v<common_t, GLint>) { SGL_MAKE_UNIFORM_FUNC(ui, pack_sz, loc) }
         else
-                static_assert(always_false<common_t>::value, "Parameter's type doesn't match!");
+            static_assert(always_false<common_t>::value, "Parameter's type doesn't match!");
     }
 };
 
@@ -507,7 +507,7 @@ void seq_add(Iter &&it, Args ... args) { ((*it++ = args), ...); }
 
 template<std::size_t StackCnt = 20, std::size_t SectorCnt = 20>
 struct sphere {
-    using dcontainer_t = std::array<GLfloat, 3 * (StackCnt + 1) * (SectorCnt + 1) + (StackCnt+1) * (SectorCnt+1) * 2>;
+    using dcontainer_t = std::array<GLfloat, (3 + 2 + 3) * (StackCnt + 1) * (SectorCnt + 1)>;
     using icontainer_t = std::array<GLuint, (StackCnt - 1) * SectorCnt * 6>;
 
     constexpr sphere(
@@ -535,7 +535,10 @@ struct sphere {
                         data_it,
                         cx + x, cy + y, cz + z,
                         factor_w * static_cast<GLfloat>(j) / SectorCnt,
-                        factor_h * static_cast<GLfloat >(i) / StackCnt);
+                        factor_h * static_cast<GLfloat>(i) / StackCnt,
+                        x / r,
+                        y / r,
+                        z / r);
                 if (i < StackCnt && j < SectorCnt)
                 {
                     if (i != 0)
@@ -547,12 +550,13 @@ struct sphere {
         }
     }
 
-    void prepare(int loc1, int loc2)
+    void prepare(int loc1, int loc2, int loc3)
     {
         vao.bind();
         vbo.write(data);
-        vao.interpret(loc1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), nullptr); // Shape.
-        vao.interpret(loc2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(sizeof(float)*3));
+        vao.interpret(loc1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), nullptr); // Shape.
+        vao.interpret(loc2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)(sizeof(float)*3));
+        vao.interpret(loc3, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)(sizeof(float)*5));
     }
 
     void draw()

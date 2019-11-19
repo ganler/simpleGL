@@ -2,12 +2,18 @@
 
 layout (location = 0) in vec3 coord3d;
 layout (location = 1) in vec2 st_coord;
+layout (location = 2) in vec3 norms_;
 
 uniform mat4 mvp;
+
 out vec2 text_coord;
+out vec3 norms;
+out vec3 frag_pos;
 
 void main(void)
 {
    gl_Position = mvp * vec4(coord3d, 1.0);
+   frag_pos = coord3d;
    text_coord = st_coord;
+   norms = norms_;
 }
